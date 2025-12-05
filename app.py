@@ -150,7 +150,7 @@ st.title("YOLOv11 Real-Time Object Detection")
 @st.cache_resource
 def load_model():
     try:
-        return YOLO("best (11).pt")
+        return YOLO("best_2.pt")
     except:
         st.error("Error loading YOLOv11 model.")
         return None
