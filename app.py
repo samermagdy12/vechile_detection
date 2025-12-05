@@ -13,7 +13,8 @@ st.set_page_config(
     initial_sidebar_state="auto",
 )
 
-# --- Full Dark Glass Theme + Slider Fix ---
+
+# --- FULL UI / DARK GLASS THEME ---
 st.markdown("""
 <style>
 
@@ -32,14 +33,13 @@ st.markdown("""
         backdrop-filter: blur(6px);
     }
 
-    /* Header Blur */
+    /* Header */
     .stApp > header {
         background: rgba(15, 23, 42, 0.7) !important;
         backdrop-filter: blur(12px);
         border-bottom: 1px solid rgba(255,255,255,0.08);
     }
 
-    /* Title Style */
     h1 {
         color: #60a5fa !important;
         font-weight: 800 !important;
@@ -55,17 +55,15 @@ st.markdown("""
         padding: 1.2rem;
     }
 
-    /* File Uploader Style */
+    /* File Upload */
     .stFileUploader {
         background: rgba(255,255,255,0.05);
         border: 2px dashed #64748b;
         border-radius: 12px;
         padding: 1rem;
-        transition: 0.3s ease;
     }
     .stFileUploader:hover {
         border-color: #3b82f6 !important;
-        box-shadow: 0 0 10px rgba(59,130,246,0.4);
     }
 
     /* Buttons */
@@ -78,62 +76,15 @@ st.markdown("""
         border: none;
         font-weight: 600;
         transition: 0.25s ease;
-        box-shadow: 0 0 10px rgba(37,99,235,0.35);
     }
     .stButton button:hover {
         transform: scale(1.03);
-        box-shadow: 0 0 15px rgba(37,99,235,0.45);
     }
 
-    /* SLIDER FIX — Perfect Alignment */
-    .stSlider {
-        margin-top: 25px !important;
-        margin-bottom: 35px !important;
-    }
+    /* Slider */
+    .stSlider { margin-top: 25px !important; margin-bottom: 35px !important; }
+    .stSlider label { font-size: 1rem !important; margin-bottom: 10px !important; }
 
-    .stSlider label {
-        font-size: 1rem !important;
-        margin-bottom: 10px !important;
-        display: block !important;
-    }
-
-    /* Slider box */
-    [data-baseweb="slider"] {
-        padding: 14px !important;
-        border-radius: 12px !important;
-        background: rgba(255,255,255,0.06) !important;
-    }
-
-    /* Slider track */
-    [data-baseweb="slider"] > div > div {
-        height: 6px !important;
-        border-radius: 8px !important;
-        background: rgba(255,255,255,0.15) !important;
-    }
-
-    /* Active progress line */
-    [data-baseweb="track"] {
-        background: linear-gradient(90deg, #3b82f6, #2563eb) !important;
-    }
-
-    /* Slider thumb */
-    [role="slider"] {
-        width: 18px !important;
-        height: 18px !important;
-        background: #3b82f6 !important;
-        border: 2px solid #93c5fd !important;
-        box-shadow: 0 0 10px rgba(59,130,246,0.8);
-    }
-
-    /* Min/Max values clean alignment */
-    .stSlider > div > div:nth-child(3) {
-        display: flex !important;
-        justify-content: space-between !important;
-        padding-top: 6px !important;
-        font-size: 0.9rem !important;
-    }
-
-    /* Images */
     .stImage > img {
         border-radius: 12px !important;
         box-shadow: 0 0 25px rgba(0,0,0,0.55);
@@ -143,131 +94,171 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
+
 # --- Title ---
 st.title("YOLOv11 Real-Time Object Detection")
 
-# --- Load Model ---
+
+# =============== LOAD MODEL ==================
 @st.cache_resource
 def load_model():
     try:
-        return YOLO("best_2.pt")
+        return YOLO("best_2.pt")   # ← عدل هنا
     except:
-        st.error("Error loading YOLOv11 model.")
+        st.error("Error loading YOLO model.")
         return None
 
 model = load_model()
 
-# --- Sidebar Layout ---
-with st.sidebar:
-    st.header("Upload Media")
 
-    uploaded_file = st.file_uploader(
-        "Choose Image or Video",
-        type=["jpg", "jpeg", "png", "mp4", "avi"]
+# =============== SIDEBAR ====================
+with st.sidebar:
+    st.header("Choose Mode")
+
+    mode = st.radio(
+        "Select Mode:",
+        ["Image/Video", "Live Camera"],
+        index=0
     )
 
     conf_value = st.slider(
-        "Confidence Threshold",
-        0.1, 1.0, 0.25, step=0.01
+        "Confidence Threshold", 0.1, 1.0, 0.25, step=0.01
     )
 
-    run_prediction = st.button("Start Prediction")
+    if mode == "Image/Video":
+        uploaded_file = st.file_uploader(
+            "Choose image or video:",
+            type=["jpg", "jpeg", "png", "mp4", "avi"]
+        )
+        run_prediction = st.button("Start Prediction")
+
+    else:
+        start_cam = st.button("Start Camera")
+        stop_cam = st.button("Stop Camera")
 
 
-# --- Main Logic ---
-if uploaded_file and run_prediction and model:
+# =========================================================
+# =============== LIVE CAMERA MODE ========================
+# =========================================================
 
-    with tempfile.TemporaryDirectory() as temp_dir:
+if mode == "Live Camera" and model:
 
-        tfile_path = os.path.join(temp_dir, uploaded_file.name)
-        with open(tfile_path, "wb") as f:
+    st.subheader("Live Camera Detection")
+    cam_placeholder = st.empty()
+
+    # حالة تشغيل/إيقاف الكاميرا
+    if "cam_running" not in st.session_state:
+        st.session_state.cam_running = False
+
+    # زر تشغيل
+    if start_cam:
+        st.session_state.cam_running = True
+
+    # زر إيقاف
+    if stop_cam:
+        st.session_state.cam_running = False
+
+    # تشغيل الكاميرا
+    if st.session_state.cam_running:
+
+        cap = cv2.VideoCapture(0)
+
+        while True:
+
+            # لو المستخدم ضغط Stop → اخرج فوراً
+            if not st.session_state.cam_running:
+                break
+
+            ret, frame = cap.read()
+            if not ret:
+                st.error("Camera Not Found!")
+                break
+
+            results = model(frame, conf=conf_value)[0]
+            annotated = results.plot()
+            annotated = cv2.cvtColor(annotated, cv2.COLOR_BGR2RGB)
+
+            cam_placeholder.image(annotated, use_container_width=True)
+
+        # إغلاق الكاميرا نهائياً
+        cap.release()
+        cam_placeholder.empty()   # مسح آخر صورة
+        st.success("Camera stopped successfully!")
+
+    st.stop()
+
+
+# =========================================================
+# =============== IMAGE / VIDEO MODE ======================
+# =========================================================
+
+if mode == "Image/Video" and uploaded_file and run_prediction and model:
+
+    with tempfile.TemporaryDirectory() as tmp:
+
+        path = os.path.join(tmp, uploaded_file.name)
+
+        with open(path, "wb") as f:
             f.write(uploaded_file.getbuffer())
 
         ext = uploaded_file.name.split('.')[-1].lower()
 
-        # ------------------ IMAGE ------------------
+        # -------- IMAGE --------
         if ext in ["jpg", "jpeg", "png"]:
-            st.subheader("Processing Image...")
 
             col1, col2 = st.columns(2)
 
             with col1:
                 st.markdown("### Original")
-                img = Image.open(tfile_path)
+                img = Image.open(path)
                 st.image(img, use_container_width=True)
 
             with col2:
                 st.markdown("### Annotated")
-                results = model.predict(tfile_path, conf=conf_value)
-                ann = results[0].plot()
-
-                rgb = cv2.cvtColor(ann, cv2.COLOR_BGR2RGB)
-                st.image(rgb, use_container_width=True)
-
-                outpath = os.path.join(temp_dir, "annotated.png")
-                cv2.imwrite(outpath, ann)
-
-                with open(outpath, "rb") as f:
-                    st.download_button(
-                        "Download Annotated Image",
-                        data=f.read(),
-                        file_name="annotated_image.png",
-                        mime="image/png"
-                    )
+                res = model(path, conf=conf_value)[0]
+                ann = res.plot()
+                ann = cv2.cvtColor(ann, cv2.COLOR_BGR2RGB)
+                st.image(ann, use_container_width=True)
 
             st.success("Image processed successfully.")
 
-        # ------------------ VIDEO ------------------
+        # -------- VIDEO --------
         else:
-            st.subheader("Processing Video...")
-            st.video(tfile_path)
+            st.subheader("Processing video...")
 
-            status = st.empty()
-            status.info("Processing frames...")
+            st.video(path)
+            status = st.info("Processing frames...")
 
-            outpath = os.path.join(temp_dir, "annotated_video.mp4")
+            out_path = os.path.join(tmp, "annotated_video.mp4")
 
-            cap = cv2.VideoCapture(tfile_path)
-            fourcc = cv2.VideoWriter_fourcc(*'mp4v')
+            cap = cv2.VideoCapture(path)
+            fourcc = cv2.VideoWriter_fourcc(*"mp4v")
             fps = cap.get(cv2.CAP_PROP_FPS)
             w = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
             h = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
 
-            out = cv2.VideoWriter(outpath, fourcc, fps, (w, h))
-
-            st_frame = st.empty()
-            bar = st.progress(0)
-            fcount = 0
+            out = cv2.VideoWriter(out_path, fourcc, fps, (w, h))
+            frame_placeholder = st.empty()
 
             while True:
                 ret, frame = cap.read()
                 if not ret:
                     break
 
-                results = model.predict(frame, conf=conf_value, verbose=False)
-                ann = results[0].plot()
-
+                res = model(frame, conf=conf_value, verbose=False)[0]
+                ann = res.plot()
                 out.write(ann)
 
-                rgb = cv2.cvtColor(ann, cv2.COLOR_BGR2RGB)
-                st_frame.image(rgb, use_container_width=True)
-
-                fcount += 1
-                bar.progress((fcount % 100))
+                ann = cv2.cvtColor(ann, cv2.COLOR_BGR2RGB)
+                frame_placeholder.image(ann, use_container_width=True)
 
             cap.release()
             out.release()
 
-            status.success("Video done!")
-            st.video(outpath)
+            status.success("Video Done!")
+            st.video(out_path)
 
-            with open(outpath, "rb") as f:
-                st.download_button(
-                    "Download Annotated Video",
-                    data=f.read(),
-                    file_name="annotated_video.mp4",
-                    mime="video/mp4"
-                )
 
 else:
-    st.info("Upload a file and press Start Prediction.")
+    if mode == "Image/Video":
+        st.info("Upload a file and press Start Prediction.")
