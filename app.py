@@ -55,7 +55,7 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # --- Title ---
-st.title("YOLOv11 Object Detection (Image / Video Only)")
+st.title("YOLOv11 Object Detection")
 
 # =============== LOAD MODEL ==================
 @st.cache_resource
