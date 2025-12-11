@@ -112,8 +112,17 @@ if uploaded_file and run_prediction and model:
                 st.markdown("### Annotated")
                 res = model(path, conf=conf_value)[0]
                 ann = res.plot()
-                ann = cv2.cvtColor(ann, cv2.COLOR_BGR2RGB)
-                st.image(ann, use_container_width=True)
+                ann_rgb = cv2.cvtColor(ann, cv2.COLOR_BGR2RGB)
+                st.image(ann_rgb, use_container_width=True)
+
+                # ---------- DOWNLOAD BUTTON FOR IMAGE ----------
+                img_bytes = cv2.imencode(".png", ann)[1].tobytes()
+                st.download_button(
+                    label="⬇ Download Annotated Image",
+                    data=img_bytes,
+                    file_name="annotated_image.png",
+                    mime="image/png"
+                )
 
             st.success("Image processed successfully.")
 
@@ -144,14 +153,23 @@ if uploaded_file and run_prediction and model:
                 ann = res.plot()
                 out.write(ann)
 
-                ann = cv2.cvtColor(ann, cv2.COLOR_BGR2RGB)
-                frame_placeholder.image(ann, use_container_width=True)
+                ann_rgb = cv2.cvtColor(ann, cv2.COLOR_BGR2RGB)
+                frame_placeholder.image(ann_rgb, use_container_width=True)
 
             cap.release()
             out.release()
 
             status.success("Video Done!")
             st.video(out_path)
+
+            # ---------- DOWNLOAD BUTTON FOR VIDEO ----------
+            with open(out_path, "rb") as f:
+                st.download_button(
+                    label="⬇ Download Annotated Video",
+                    data=f,
+                    file_name="annotated_video.mp4",
+                    mime="video/mp4"
+                )
 
 else:
     st.info("Upload a file and press Start Prediction.")
